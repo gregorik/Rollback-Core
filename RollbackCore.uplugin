@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0.0",
+	"FriendlyName": "Rollback Core",
+	"Description": "Open-source deterministic rollback netcode for Unreal Engine 5: auto-state saving via SaveGame property reflection, UDP transport with input redundancy and reliable ACKs, and a basic local-prediction demo.",
+	"Category": "Networking",
+	"CreatedBy": "GregOrigin",
+	"CreatedByURL": "https://github.com/GregOrigin",
+	"DocsURL": "https://github.com/GregOrigin/RollbackCore",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/GregOrigin/RollbackCore/issues",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "RollbackCore",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

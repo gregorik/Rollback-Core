@@ -1,0 +1,35 @@
+# Unreal Engine build / cache artifacts
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/
+
+# Visual Studio / Rider / IDE
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userprefs
+*.sln
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+
+# UE generated project files
+*.xcodeproj/
+*.xcworkspace/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Local notes / scratch
+TODO.local.md
+SCRATCH.md
