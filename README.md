@@ -20,6 +20,8 @@
 ---
 
 > **TL;DR** — Add `URollbackStateComponent` to a pawn, mark anything you want rolled-back with `UPROPERTY(SaveGame)`, call `URollbackManager::AdvanceFrame()` from your tick. Late-arriving authoritative input? `RollbackToFrame(N)` resimulates from frame N using buffered inputs. The whole thing is ~10 source files, one runtime module, one UDP transport, zero external dependencies beyond stock UE5.
+>
+> [Read the full manual here.](https://gregorigin.com/Docs/Rollback_Core/)
 
 ## Table of contents
 
