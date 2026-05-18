@@ -23,6 +23,8 @@
 >
 > [Read the full manual here.](https://gregorigin.com/Docs/Rollback_Core/)
 
+*If you have consulting and/or custom pipeline integration in mind: I offer dedicated architecture consulting for production games & projects.* 📬 Please [contact me](https://gregorigin.com/contact.html) or see my [extended portfolio](https://www.gregorigin.com/Portfolio/). 👨‍💻 
+
 ## Table of contents
 
 - [What is rollback netcode?](#what-is-rollback-netcode)
