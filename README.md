@@ -12,6 +12,8 @@
 [![Issues](https://img.shields.io/github/issues/gregorik/Rollback-Core)](https://github.com/gregorik/Rollback-Core/issues)
 [![Stars](https://img.shields.io/github/stars/gregorik/Rollback-Core?style=social)](https://github.com/gregorik/Rollback-Core/stargazers)
 
+[Watch a video: 0.2.0](https://www.youtube.com/watch?v=_uteUvbLIq4)<br>
+
 </div>
 
 <img width="1920" height="1080" alt="RollbackProLogoSmall1" src="https://github.com/user-attachments/assets/a923be59-13c0-4535-8b2d-28a8ce9d42cb" />
