@@ -373,9 +373,9 @@ Or from the editor: **Tools → Session Frontend → Automation → "RollbackCor
 
 ## Rollback Core (OSS) vs Rollback Core Pro (Fab)
 
-This repository (**Rollback Core**) is MIT-licensed and ships the core simulation, transport, and basic demo — enough to build production fighting/platform-fighter networking without writing a line of rollback or transport code.
+This repository (**Rollback Core**) is MIT-licensed and ships the core simulation, transport, and basic demo: enough to build production fighting/platform-fighter networking without writing a line of rollback or transport code.
 
-**Rollback Core Pro** is a commercial superset on the [Unreal Fab](https://www.fab.com/) marketplace. It targets teams who want plug-and-play matchmaking, an in-editor debugging suite, multi-engine-version packages, and finished demos.
+**Rollback Core Pro** is a commercial superset on the [Fab marketplace](https://www.fab.com/listings/03aa010f-2413-4a98-91b1-4fa67d0aedd4). It targets teams who want plug-and-play matchmaking, an in-editor debugging suite, multi-engine-version packages, and finished demos.
 
 <div align="center">
 
@@ -525,7 +525,7 @@ Rollback-Core/
 
 MIT — see [LICENSE](LICENSE).
 
-Built by **[gregorik](https://github.com/gregorik)** (GregOrigin) as a companion to the commercial [Rollback Core Pro](https://www.fab.com/) plugin on Fab. The two share their core algorithm; this repo is the public, source-available subset.
+Built by **[Andras Gregori](https://github.com/gregorik)** (GregOrigin) as a companion to the commercial [Rollback Core Pro](https://www.fab.com/listings/03aa010f-2413-4a98-91b1-4fa67d0aedd4) plugin on Fab. The two share their core algorithm; this repo is the public, source-available subset.
 
 Issues, PRs, and discussion welcome at [github.com/gregorik/Rollback-Core](https://github.com/gregorik/Rollback-Core).
 
