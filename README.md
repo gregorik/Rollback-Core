@@ -46,6 +46,9 @@
 
 ---
 
+<img width="1920" height="1080" alt="RBC2" src="https://github.com/user-attachments/assets/627d69ef-c1cf-416d-a530-d662a3a8aec2" />
+
+
 ## What is rollback netcode?
 
 Rollback netcode is the prediction strategy invented for fighting games (GGPO, 2006) and now standard across the competitive genre — Street Fighter 6, Guilty Gear Strive, Skullgirls, Mortal Kombat 1. Instead of waiting for the remote player's input (delay-based netcode), each peer **predicts** the opponent will repeat their last input and **simulates the frame immediately**. When the real input arrives later, the simulation **rolls back** to the predicted frame, applies the corrected input, and **fast-forwards** to the present.
