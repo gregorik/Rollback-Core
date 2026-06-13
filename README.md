@@ -109,6 +109,10 @@ flowchart LR
 
 Three subsystems, one component, one Blueprint library, ~13 source files total.
 
+<img width="1920" height="1080" alt="RBC3" src="https://github.com/user-attachments/assets/54effd70-be9d-4ee6-b9d2-653879749012" />
+
+
+
 ## Install
 
 ### Option A — submodule (recommended for git-managed projects)
