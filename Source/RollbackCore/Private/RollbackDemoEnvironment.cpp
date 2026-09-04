@@ -141,7 +141,7 @@ void ARollbackDemoEnvironment::Tick(float DeltaTime)
         if (ReceivedInput != LastReceivedP2Input)
         {
             LastPredictedRemoteLocation = RemotePawn->GetActorLocation();
-            Manager->RollbackToFrame(FrameToReceive);
+            Manager->RollbackToFrame(FrameToReceive, FrameToReceive);
             LastCorrectedRemoteLocation = RemotePawn->GetActorLocation();
             LastCorrectionDistance = FVector::Dist(LastPredictedRemoteLocation, LastCorrectedRemoteLocation);
             LastCorrectedFrame = FrameToReceive;
@@ -149,7 +149,14 @@ void ARollbackDemoEnvironment::Tick(float DeltaTime)
             LastReceivedP2Input = ReceivedInput;
         }
 
-        P2TrueInputs.Remove(FrameToReceive - 100); // Cleanup old state
+        const int32 OldestFrameToKeep = FrameToReceive - 120;
+        for (auto It = P2TrueInputs.CreateIterator(); It; ++It)
+        {
+            if (It.Key() < OldestFrameToKeep)
+            {
+                It.RemoveCurrent();
+            }
+        }
     }
 
     // 4. Update ongoing prediction (assume they keep doing what they last did)

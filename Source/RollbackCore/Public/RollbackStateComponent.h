@@ -19,6 +19,19 @@ struct FRollbackInput
     UPROPERTY(BlueprintReadWrite, Category = "Rollback")
     FVector Axes = FVector::ZeroVector;
 
+    void QuantizeAxes()
+    {
+        if (!FMath::IsFinite(Axes.X) || !FMath::IsFinite(Axes.Y) || !FMath::IsFinite(Axes.Z))
+        {
+            Axes = FVector::ZeroVector;
+            return;
+        }
+
+        Axes.X = FMath::Clamp(FMath::RoundToDouble(Axes.X * 1000.0) / 1000.0, -1.0, 1.0);
+        Axes.Y = FMath::Clamp(FMath::RoundToDouble(Axes.Y * 1000.0) / 1000.0, -1.0, 1.0);
+        Axes.Z = FMath::Clamp(FMath::RoundToDouble(Axes.Z * 1000.0) / 1000.0, -1.0, 1.0);
+    }
+
     bool operator==(const FRollbackInput& Other) const
     {
         return Buttons == Other.Buttons && Axes == Other.Axes;
@@ -65,6 +78,7 @@ struct FRollbackFrameState
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnRollbackTickSignature, float, DeltaTime, int32, Frame, FRollbackInput, Input);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnRollbackStateLoadedSignature, int32, Frame, FVector, RestoredVelocity);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ROLLBACKCORE_API URollbackStateComponent : public UActorComponent, public IRollbackEntity
@@ -75,6 +89,7 @@ public:
 	URollbackStateComponent();
 
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void RollbackTick(float DeltaTime, int32 Frame) override;
     virtual void SaveRollbackState(int32 Frame) override;
     virtual void LoadRollbackState(int32 Frame) override;
@@ -100,6 +115,12 @@ public:
     UFUNCTION(BlueprintPure, Category = "Rollback|Input")
     FRollbackInput GetInputForFrame(int32 Frame) const;
 
+    UFUNCTION(BlueprintCallable, Category = "Rollback")
+    void ResetBuffers();
+
+    void TrimStateBuffer(int32 NewestFrame);
+    void TrimInputBuffer(int32 NewestFrame);
+
     UFUNCTION(BlueprintPure, Category = "Rollback|Debug")
     int32 GetTrackedPropertyCount() const { return TrackedProperties.Num(); }
 
@@ -121,12 +142,18 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "Rollback|Debug")
     int32 LastRestoredChecksum = 0;
 
+    UPROPERTY(BlueprintReadOnly, Category = "Rollback|Debug")
+    FVector LastRestoredVelocity = FVector::ZeroVector;
+
     // Event fired during a deterministic tick, where BP applies inputs
     UFUNCTION(BlueprintImplementableEvent, Category = "Rollback")
     void OnRollbackTick(float DeltaTime, int32 Frame, FRollbackInput Input);
 
     UPROPERTY(BlueprintAssignable, Category = "Rollback")
     FOnRollbackTickSignature OnRollbackTickDelegate;
+
+    UPROPERTY(BlueprintAssignable, Category = "Rollback")
+    FOnRollbackStateLoadedSignature OnRollbackStateLoadedDelegate;
 
 private:
     void SaveActorVariables(TArray<uint8>& OutData);

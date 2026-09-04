@@ -11,6 +11,7 @@
 #include "Misc/ScopeExit.h"
 #include "RollbackDemoPawn.h"
 #include "RollbackManager.h"
+#include "RollbackMovementComponent.h"
 #include "RollbackNetSubsystem.h"
 #include "RollbackStateComponent.h"
 
@@ -481,6 +482,89 @@ bool FRollbackPerformanceStatsTest::RunTest(const FString& Parameters)
     const FRollbackPerformanceStats PerfAfterRollback = NetSubsystem->GetPerformanceStats();
     TestTrue(TEXT("Rollback recorded"), PerfAfterRollback.TotalRollbackCount > 0);
     TestTrue(TEXT("Max rollback depth tracked"), PerfAfterRollback.MaxRollbackDepthFrames > 0);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRollbackEntityLifecycleTest, "RollbackCore.State.EntityLifecycle", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRollbackEntityLifecycleTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = RollbackCore::Tests::CreateTestWorld();
+    ON_SCOPE_EXIT { RollbackCore::Tests::DestroyTestWorld(World); };
+
+    URollbackManager* Manager = World->GetSubsystem<URollbackManager>();
+    URollbackNetSubsystem* NetSubsystem = World->GetSubsystem<URollbackNetSubsystem>();
+    ARollbackDemoPawn* Pawn = RollbackCore::Tests::SpawnDemoPawn(World, FVector::ZeroVector);
+    TestNotNull(TEXT("Manager exists"), Manager);
+    TestNotNull(TEXT("Demo pawn spawned"), Pawn);
+    if (!Manager || !Pawn || !Pawn->StateComp)
+    {
+        return false;
+    }
+
+    TestEqual(TEXT("Registered entity count is 1 after spawn"), NetSubsystem ? NetSubsystem->GetPerformanceStats().RegisteredEntityCount : 1, 1);
+
+    // Destroy pawn and verify clean unregistration without dangling pointer issues
+    Pawn->Destroy();
+    Manager->AdvanceFrame();
+
+    TestEqual(TEXT("Registered entity count drops to 0 after actor destroy"), NetSubsystem ? NetSubsystem->GetPerformanceStats().RegisteredEntityCount : 0, 0);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRollbackMovementStepTest, "RollbackCore.Movement.DeterministicStep", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRollbackMovementStepTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = RollbackCore::Tests::CreateTestWorld();
+    ON_SCOPE_EXIT { RollbackCore::Tests::DestroyTestWorld(World); };
+
+    ARollbackDemoPawn* Pawn = RollbackCore::Tests::SpawnDemoPawn(World, FVector::ZeroVector);
+    TestNotNull(TEXT("Demo pawn spawned"), Pawn);
+    if (!Pawn || !Pawn->MoveComp)
+    {
+        return false;
+    }
+
+    const FVector StartLocation = Pawn->GetActorLocation();
+
+    // Deterministic move forward
+    Pawn->MoveComp->DeterministicMoveForStep(FVector(1.0, 0.0, 0.0), 1.0f / 60.0f);
+    const FVector StepLocation = Pawn->GetActorLocation();
+    TestTrue(TEXT("Actor moved forward in X"), StepLocation.X > StartLocation.X);
+
+    // Test NaN input protection - must not corrupt location
+    const FVector PreNaNLocation = Pawn->GetActorLocation();
+    Pawn->MoveComp->DeterministicMoveForStep(FVector(NAN, 0.0, 0.0), 1.0f / 60.0f);
+    TestTrue(TEXT("NaN input is rejected and does not mutate location"), Pawn->GetActorLocation().Equals(PreNaNLocation, KINDA_SMALL_NUMBER));
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRollbackInputQuantizationTest, "RollbackCore.Input.Quantization", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRollbackInputQuantizationTest::RunTest(const FString& Parameters)
+{
+    FRollbackInput Input;
+    Input.Axes = FVector(0.123456, -0.987654, 0.0);
+    Input.QuantizeAxes();
+
+    TestTrue(TEXT("Input X quantized to 3 decimal places"), FMath::IsNearlyEqual(Input.Axes.X, 0.123, 1e-4));
+    TestTrue(TEXT("Input Y quantized to 3 decimal places"), FMath::IsNearlyEqual(Input.Axes.Y, -0.988, 1e-4));
+
+    // NaN protection
+    FRollbackInput NaNInput;
+    NaNInput.Axes = FVector(NAN, 1.0, 0.0);
+    NaNInput.QuantizeAxes();
+    TestTrue(TEXT("NaN input sanitized to zero vector"), NaNInput.Axes.IsZero());
+
+    // Clamp protection
+    FRollbackInput LargeInput;
+    LargeInput.Axes = FVector(50.0, -100.0, 0.0);
+    LargeInput.QuantizeAxes();
+    TestTrue(TEXT("Clamped to max 1.0"), LargeInput.Axes.X == 1.0);
+    TestTrue(TEXT("Clamped to min -1.0"), LargeInput.Axes.Y == -1.0);
+
     return true;
 }
 

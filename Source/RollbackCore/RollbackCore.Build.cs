@@ -8,6 +8,8 @@ public class RollbackCore : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
+		FPSemantics = FPSemanticsMode.Precise;
+
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{

@@ -97,7 +97,10 @@ void ARollbackDemoPawn::SetColor(FLinearColor Color)
 
 void ARollbackDemoPawn::HandleRollbackTick(float DeltaTime, int32 Frame, FRollbackInput Input)
 {
-    MoveComp->DeterministicMove(Input.Axes);
+    if (MoveComp)
+    {
+        MoveComp->DeterministicMoveForStep(Input.Axes, DeltaTime);
+    }
     SimulatedVelocity = Input.Axes; // Tracked via SaveGame property flag
 }
 

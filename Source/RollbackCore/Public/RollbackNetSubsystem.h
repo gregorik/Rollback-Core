@@ -99,6 +99,7 @@ private:
     {
         TArray<uint8> Payload;
         TSharedPtr<FInternetAddr> Destination;
+        double InitialSentSeconds = 0.0;
         double LastSentSeconds = 0.0;
         int32 SendAttempts = 0;
     };
