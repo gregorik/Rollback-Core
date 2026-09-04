@@ -216,7 +216,14 @@ bool URollbackNetSubsystem::SendInputFrame(int32 PlayerId, int32 Frame, FRollbac
     }
 
     LocalInputHistory.Add(Frame, Input);
-    LocalInputHistory.Remove(Frame - FMath::Max(Config.InputRedundancyFrames + 120, 180));
+    const int32 OldestFrameToKeep = Frame - FMath::Max(Config.InputRedundancyFrames + 120, 180);
+    for (auto It = LocalInputHistory.CreateIterator(); It; ++It)
+    {
+        if (It.Key() < OldestFrameToKeep)
+        {
+            It.RemoveCurrent();
+        }
+    }
 
     TArray<FNetworkInputFrame> Frames;
     for (int32 HistoryFrame = Frame - Config.InputRedundancyFrames; HistoryFrame <= Frame; ++HistoryFrame)
@@ -725,6 +732,7 @@ bool URollbackNetSubsystem::SendPacket(FRemotePeer& Peer, uint8 PacketType, cons
         FPendingReliablePacket PendingPacket;
         PendingPacket.Payload = Payload;
         PendingPacket.Destination = Peer.Endpoint->Clone();
+        PendingPacket.InitialSentSeconds = NowSeconds;
         PendingPacket.LastSentSeconds = NowSeconds;
         PendingPacket.SendAttempts = 1;
         Peer.PendingReliable.Add(Sequence, MoveTemp(PendingPacket));
@@ -787,7 +795,18 @@ void URollbackNetSubsystem::MarkSequenceReceived(FRemotePeer& Peer, uint32 Seque
     while (Peer.ReceivedSequences.Contains(Peer.HighestContiguousReceivedSequence + 1))
     {
         Peer.HighestContiguousReceivedSequence++;
-        Peer.ReceivedSequences.Remove(Peer.HighestContiguousReceivedSequence - 512);
+    }
+
+    if (Peer.HighestContiguousReceivedSequence > 256)
+    {
+        const uint32 MinKeep = Peer.HighestContiguousReceivedSequence - 256;
+        for (auto It = Peer.ReceivedSequences.CreateIterator(); It; ++It)
+        {
+            if (*It < MinKeep)
+            {
+                It.RemoveCurrent();
+            }
+        }
     }
 }
 
@@ -799,7 +818,7 @@ void URollbackNetSubsystem::RemoveAckedPackets(FRemotePeer& Peer, uint32 AckSequ
         if (Pending.Key <= AckSequence)
         {
             AckedSequences.Add(Pending.Key);
-            Peer.LastRoundTripMs = static_cast<float>((NowSeconds - Pending.Value.LastSentSeconds) * 1000.0);
+            Peer.LastRoundTripMs = FMath::Max(0.0f, static_cast<float>((NowSeconds - Pending.Value.InitialSentSeconds) * 1000.0));
         }
     }
 
@@ -832,7 +851,14 @@ void URollbackNetSubsystem::CacheRemoteInput(int32 PlayerId, int32 Frame, const 
         OnRemoteInputReceived.Broadcast(PlayerId, Frame, Input);
     }
 
-    PlayerInputs.Remove(Frame - 600);
+    const int32 OldestFrameToKeep = Frame - 600;
+    for (auto It = PlayerInputs.CreateIterator(); It; ++It)
+    {
+        if (It.Key() < OldestFrameToKeep)
+        {
+            It.RemoveCurrent();
+        }
+    }
 }
 
 URollbackNetSubsystem::FRemotePeer* URollbackNetSubsystem::FindPeerByEndpoint(const FInternetAddr& Addr)
@@ -958,10 +984,15 @@ void URollbackNetSubsystem::UpdatePerformanceStats(double NowSeconds)
     {
         if (Ts >= CurrentSecond) CountThisSecond++;
     }
-    PerfStats.RollbacksInLastSecond = CountThisSecond;
-
-    PerfStats.ConnectedPeerCount = Peers.Num();
-    PerfStats.DesyncCount = PerfStats.DesyncCount;
+    int32 ConnectedCount = 0;
+    for (const FRemotePeer& Peer : Peers)
+    {
+        if (Peer.bConnected)
+        {
+            ConnectedCount++;
+        }
+    }
+    PerfStats.ConnectedPeerCount = ConnectedCount;
 }
 
 void URollbackNetSubsystem::RecordSimulationTime(float Ms)

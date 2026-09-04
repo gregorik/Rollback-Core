@@ -354,16 +354,19 @@ Visuals (meshes, animation, VFX, audio, cameras) are **not** rolled back. They f
 
 ## Tests
 
-Automation tests live in [`Source/RollbackCore/Private/Tests/`](Source/RollbackCore/Private/Tests/) under the standard `WITH_DEV_AUTOMATION_TESTS` guard. Eight tests cover:
+Automation tests live in [`Source/RollbackCore/Private/Tests/`](Source/RollbackCore/Private/Tests/) under the standard `WITH_DEV_AUTOMATION_TESTS` guard. Eleven tests cover:
 
 - State save/restore round-trip via `SaveGame` reflection
+- Deterministic property reflection sorting & transient property exclusion
+- Dynamic fixed-timestep deterministic movement & sub-step execution
+- Safe input quantization, NaN/INF sanitation, and magnitude clamping
+- Entity lifecycle deregistration & buffer cleanup on actor destroy
 - Late authoritative input correction (the canonical rollback case)
 - Network input buffer → state component application
 - Debug history scrubbing
 - Two-peer UDP loopback smoke test
 - Three-peer multi-peer connect & input exchange
-- Peer-timeout detection
-- Performance-stats sanity
+- Peer-timeout detection and RTT measurement
 
 Run them from a commandlet:
 

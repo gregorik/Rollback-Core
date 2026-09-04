@@ -2,6 +2,7 @@
 
 #include "RollbackStateComponent.h"
 #include "GameFramework/Actor.h"
+#include "Components/PrimitiveComponent.h"
 #include "RollbackManager.h"
 #include "RollbackNetSubsystem.h"
 #include "Engine/World.h"
@@ -20,17 +21,34 @@ void URollbackStateComponent::BeginPlay()
 {
     Super::BeginPlay();
     
+    TrackedProperties.Reset();
     AActor* Owner = GetOwner();
     if (Owner)
     {
         // Automatically cache all Blueprint variables marked as "SaveGame"
         for (TFieldIterator<FProperty> It(Owner->GetClass()); It; ++It)
         {
-            if (It->HasAnyPropertyFlags(CPF_SaveGame))
+            FProperty* Prop = *It;
+            if (Prop && Prop->HasAnyPropertyFlags(CPF_SaveGame))
             {
-                TrackedProperties.Add(*It);
+                if (Prop->HasAnyPropertyFlags(CPF_Transient | CPF_DuplicateTransient))
+                {
+                    continue;
+                }
+                if (CastField<FObjectPropertyBase>(Prop) || CastField<FInterfaceProperty>(Prop) ||
+                    CastField<FDelegateProperty>(Prop) || CastField<FMulticastDelegateProperty>(Prop))
+                {
+                    continue;
+                }
+                TrackedProperties.Add(Prop);
             }
         }
+
+        // Sort tracked properties alphabetically by FName for cross-platform/compiler determinism
+        TrackedProperties.Sort([](const FProperty& A, const FProperty& B)
+        {
+            return A.GetFName().LexicalLess(B.GetFName());
+        });
     }
 
     if (UWorld* World = GetWorld())
@@ -42,12 +60,87 @@ void URollbackStateComponent::BeginPlay()
     }
 }
 
+void URollbackStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (UWorld* World = GetWorld())
+    {
+        if (URollbackManager* Manager = World->GetSubsystem<URollbackManager>())
+        {
+            Manager->UnregisterEntity(this);
+        }
+    }
+
+    ResetBuffers();
+    TrackedProperties.Reset();
+    Super::EndPlay(EndPlayReason);
+}
+
+void URollbackStateComponent::ResetBuffers()
+{
+    StateBuffer.Reset();
+    InputBuffer.Reset();
+}
+
+void URollbackStateComponent::TrimStateBuffer(int32 NewestFrame)
+{
+    const int32 Capacity = FMath::Max(2, MaxBufferSize);
+    const int32 OldestAllowedFrame = NewestFrame - Capacity + 1;
+    for (auto It = StateBuffer.CreateIterator(); It; ++It)
+    {
+        if (It.Key() < OldestAllowedFrame)
+        {
+            It.RemoveCurrent();
+        }
+    }
+
+    while (StateBuffer.Num() > Capacity)
+    {
+        int32 OldestFrame = MAX_int32;
+        for (const TPair<int32, FRollbackFrameState>& Pair : StateBuffer)
+        {
+            OldestFrame = FMath::Min(OldestFrame, Pair.Key);
+        }
+        if (OldestFrame == MAX_int32)
+        {
+            break;
+        }
+        StateBuffer.Remove(OldestFrame);
+    }
+}
+
+void URollbackStateComponent::TrimInputBuffer(int32 NewestFrame)
+{
+    const int32 Capacity = FMath::Max(2, MaxBufferSize * 2);
+    const int32 OldestAllowedFrame = NewestFrame - Capacity + 1;
+    for (auto It = InputBuffer.CreateIterator(); It; ++It)
+    {
+        if (It.Key() < OldestAllowedFrame)
+        {
+            It.RemoveCurrent();
+        }
+    }
+
+    while (InputBuffer.Num() > Capacity)
+    {
+        int32 OldestFrame = MAX_int32;
+        for (const TPair<int32, FRollbackInput>& Pair : InputBuffer)
+        {
+            OldestFrame = FMath::Min(OldestFrame, Pair.Key);
+        }
+        if (OldestFrame == MAX_int32)
+        {
+            break;
+        }
+        InputBuffer.Remove(OldestFrame);
+    }
+}
+
 void URollbackStateComponent::RollbackTick(float DeltaTime, int32 Frame)
 {
     FRollbackInput InputToUse;
-    if (InputBuffer.Contains(Frame))
+    if (const FRollbackInput* Found = InputBuffer.Find(Frame))
     {
-        InputToUse = InputBuffer[Frame];
+        InputToUse = *Found;
     }
     else
     {
@@ -59,8 +152,10 @@ void URollbackStateComponent::RollbackTick(float DeltaTime, int32 Frame)
             }
         }
 
+        CurrentLocalInput.QuantizeAxes();
         InputToUse = CurrentLocalInput;
         InputBuffer.Add(Frame, InputToUse); // Record local prediction
+        TrimInputBuffer(Frame);
     }
 
     OnRollbackTick(DeltaTime, Frame, InputToUse);
@@ -69,12 +164,14 @@ void URollbackStateComponent::RollbackTick(float DeltaTime, int32 Frame)
 
 void URollbackStateComponent::InjectInputForFrame(int32 Frame, FRollbackInput Input)
 {
-    InputBuffer.Add(Frame, Input);
-    
-    if (InputBuffer.Num() > MaxBufferSize * 2)
+    if (Frame < 0)
     {
-        InputBuffer.Remove(Frame - (MaxBufferSize * 2));
+        return;
     }
+
+    Input.QuantizeAxes();
+    InputBuffer.Add(Frame, Input);
+    TrimInputBuffer(Frame);
 }
 
 FRollbackInput URollbackStateComponent::GetInputForFrame(int32 Frame) const
@@ -104,12 +201,7 @@ void URollbackStateComponent::SaveRollbackState(int32 Frame)
     LastSavedChecksum = NewState.ActorData.Num() > 0 ? static_cast<int32>(FCrc::MemCrc32(NewState.ActorData.GetData(), NewState.ActorData.Num())) : 0;
 
     StateBuffer.Add(Frame, NewState);
-
-    if (StateBuffer.Num() > MaxBufferSize)
-    {
-        int32 OldestFrame = Frame - MaxBufferSize;
-        StateBuffer.Remove(OldestFrame);
-    }
+    TrimStateBuffer(Frame);
 
     const double SerializeEnd = FPlatformTime::Seconds();
     const float SerializeMs = static_cast<float>((SerializeEnd - SerializeStart) * 1000.0);
@@ -125,17 +217,27 @@ void URollbackStateComponent::SaveRollbackState(int32 Frame)
 
 void URollbackStateComponent::LoadRollbackState(int32 Frame)
 {
-    if (StateBuffer.Contains(Frame))
+    if (const FRollbackFrameState* FoundState = StateBuffer.Find(Frame))
     {
-        FRollbackFrameState& State = StateBuffer[Frame];
         AActor* Owner = GetOwner();
         if (Owner)
         {
-            Owner->SetActorLocationAndRotation(State.Location, State.Rotation);
-            LoadActorVariables(State.ActorData);
+            Owner->SetActorLocationAndRotation(FoundState->Location, FoundState->Rotation, false, nullptr, ETeleportType::TeleportPhysics);
+
+            if (UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(Owner->GetRootComponent()))
+            {
+                if (RootPrimitive->IsSimulatingPhysics())
+                {
+                    RootPrimitive->SetPhysicsLinearVelocity(FoundState->Velocity);
+                }
+            }
+
+            LoadActorVariables(FoundState->ActorData);
             LastRestoredFrame = Frame;
-            LastRestoredByteCount = State.ActorData.Num();
-            LastRestoredChecksum = State.ActorData.Num() > 0 ? static_cast<int32>(FCrc::MemCrc32(State.ActorData.GetData(), State.ActorData.Num())) : 0;
+            LastRestoredByteCount = FoundState->ActorData.Num();
+            LastRestoredChecksum = FoundState->ActorData.Num() > 0 ? static_cast<int32>(FCrc::MemCrc32(FoundState->ActorData.GetData(), FoundState->ActorData.Num())) : 0;
+            LastRestoredVelocity = FoundState->Velocity;
+            OnRollbackStateLoadedDelegate.Broadcast(Frame, FoundState->Velocity);
         }
     }
 }

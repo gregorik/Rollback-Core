@@ -22,6 +22,7 @@ void URollbackManager::Initialize(FSubsystemCollectionBase& Collection)
             : 1.0f / 60.0f;
         bEnableVisualDebugging = Settings->bEnableVisualDebuggingByDefault;
         DebugLiveFrameLag = Settings->DebugLiveFrameLag;
+        MaxRollbackDepthFrames = FMath::Max(0, Settings->MaxRollbackDepthFrames);
     }
 
     TickHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &URollbackManager::TickFunction));
@@ -30,27 +31,47 @@ void URollbackManager::Initialize(FSubsystemCollectionBase& Collection)
 void URollbackManager::Deinitialize()
 {
     FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
+    RegisteredEntities.Reset();
     Super::Deinitialize();
 }
 
 bool URollbackManager::TickFunction(float DeltaTime)
 {
+    UWorld* World = GetWorld();
+    if (!World || World->IsPaused())
+    {
+        return true;
+    }
+
     Tick(DeltaTime);
     return true;
 }
 
 void URollbackManager::Tick(float DeltaTime)
 {
-    Accumulator += DeltaTime;
-    while (Accumulator >= FixedTimeStep)
+    if (!FMath::IsFinite(DeltaTime) || DeltaTime <= 0.0f || FixedTimeStep <= 0.0f)
+    {
+        return;
+    }
+
+    const float MaxAccumulatedTime = FixedTimeStep * 8.0f;
+    Accumulator = FMath::Min(Accumulator + DeltaTime, MaxAccumulatedTime);
+    int32 StepsTaken = 0;
+    while (Accumulator >= FixedTimeStep && StepsTaken < 8)
     {
         AdvanceFrame();
         Accumulator -= FixedTimeStep;
+        StepsTaken++;
     }
 }
 
 void URollbackManager::RegisterEntity(TScriptInterface<IRollbackEntity> Entity)
 {
+    if (!IsValid(Entity.GetObject()))
+    {
+        return;
+    }
+
     if (!RegisteredEntities.Contains(Entity))
     {
         RegisteredEntities.Add(Entity);
@@ -102,19 +123,24 @@ void URollbackManager::AdvanceFrame()
 
 void URollbackManager::SimulateFrame(int32 Frame)
 {
-    for (auto& Entity : RegisteredEntities)
+    RegisteredEntities.RemoveAll([](const TScriptInterface<IRollbackEntity>& E)
     {
-        if (Entity)
+        return !IsValid(E.GetObject());
+    });
+
+    for (int32 i = 0; i < RegisteredEntities.Num(); ++i)
+    {
+        if (RegisteredEntities[i])
         {
-            Entity->RollbackTick(FixedTimeStep, Frame);
+            RegisteredEntities[i]->RollbackTick(FixedTimeStep, Frame);
         }
     }
     
-    for (auto& Entity : RegisteredEntities)
+    for (int32 i = 0; i < RegisteredEntities.Num(); ++i)
     {
-        if (Entity)
+        if (RegisteredEntities[i])
         {
-            Entity->SaveRollbackState(Frame);
+            RegisteredEntities[i]->SaveRollbackState(Frame);
             if (bIsReplayingRollback)
             {
                 LastRollbackSavedStates++;
@@ -122,15 +148,25 @@ void URollbackManager::SimulateFrame(int32 Frame)
         }
     }
     
-    if (bEnableVisualDebugging)
+    if (bEnableVisualDebugging && !bIsReplayingRollback)
     {
-        DrawDebugState(Frame - 5);
+        DrawDebugState(FMath::Max(0, Frame - DebugLiveFrameLag));
     }
 }
 
 void URollbackManager::RollbackToFrame(int32 Frame, int32 EarliestMismatchFrame)
 {
     if (Frame >= CurrentFrame || Frame < 0) return;
+
+    if (MaxRollbackDepthFrames > 0 && (CurrentFrame - Frame) > MaxRollbackDepthFrames)
+    {
+        Frame = FMath::Max(0, CurrentFrame - MaxRollbackDepthFrames);
+    }
+
+    RegisteredEntities.RemoveAll([](const TScriptInterface<IRollbackEntity>& E)
+    {
+        return !IsValid(E.GetObject());
+    });
 
     const double RollbackStart = FPlatformTime::Seconds();
 
@@ -161,11 +197,11 @@ void URollbackManager::RollbackToFrame(int32 Frame, int32 EarliestMismatchFrame)
     LastRollbackRestoredStates = 0;
     LastRollbackSavedStates = 0;
 
-    for (auto& Entity : RegisteredEntities)
+    for (int32 i = 0; i < RegisteredEntities.Num(); ++i)
     {
-        if (Entity)
+        if (RegisteredEntities[i])
         {
-            Entity->LoadRollbackState(Frame);
+            RegisteredEntities[i]->LoadRollbackState(Frame);
             LastRollbackRestoredStates++;
         }
     }
@@ -175,7 +211,7 @@ void URollbackManager::RollbackToFrame(int32 Frame, int32 EarliestMismatchFrame)
     {
         SimulateFrame(SimFrame);
 
-        if (EarliestMismatchFrame < 0 || SimFrame < EarliestMismatchFrame)
+        if (EarliestMismatchFrame >= 0 && SimFrame < EarliestMismatchFrame)
         {
             for (auto& Entity : RegisteredEntities)
             {

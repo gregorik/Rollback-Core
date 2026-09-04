@@ -58,14 +58,4 @@ public:
         meta = (ClampMin = "0", ClampMax = "60", DisplayName = "Debug Live Frame Lag",
                 ToolTip = "Frames the visual debugger trails behind the live frame so corrections are visible."))
     int32 DebugLiveFrameLag = 5;
-
-    UPROPERTY(EditAnywhere, Config, Category = "Debug",
-        meta = (DisplayName = "Auto-Open Stats Panel in PIE",
-                ToolTip = "If true, the Rollback Stats panel opens automatically the first time you press Play in Editor each session."))
-    bool bAutoOpenStatsPanelInPIE = false;
-
-    UPROPERTY(EditAnywhere, Config, Category = "Onboarding",
-        meta = (DisplayName = "Show Setup Wizard On Startup",
-                ToolTip = "If true, the Rollback Setup Wizard opens automatically once when the project loads. Uncheck the 'Don't show again' option in the wizard to clear this."))
-    bool bShowSetupWizardOnStartup = true;
 };

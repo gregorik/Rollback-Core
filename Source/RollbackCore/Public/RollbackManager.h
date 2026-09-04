@@ -90,8 +90,17 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Rollback|Debug")
     void SetDebugScrubFollowLive(bool bInFollowLive);
 
+    UFUNCTION(BlueprintPure, Category = "Rollback")
+    float GetFixedTimeStep() const { return FixedTimeStep; }
+
+    UFUNCTION(BlueprintPure, Category = "Rollback")
+    bool IsReplayingRollback() const { return bIsReplayingRollback; }
+
     UPROPERTY(BlueprintReadOnly, Category = "Rollback")
-    int32 CurrentFrame;
+    int32 CurrentFrame = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Rollback")
+    int32 MaxRollbackDepthFrames = 12;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rollback|Debug")
     bool bEnableVisualDebugging = true;

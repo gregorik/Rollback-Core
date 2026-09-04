@@ -14,10 +14,17 @@ class ROLLBACKCORE_API URollbackMovementComponent : public UActorComponent
 public:	
 	URollbackMovementComponent();
     
-    // Moves the actor with simple deterministic math (integer based scaling under the hood, or clamped floats)
+    // Moves the actor with simple deterministic math using the fixed timestep from URollbackManager
     UFUNCTION(BlueprintCallable, Category = "Rollback|Movement")
     void DeterministicMove(FVector InputVector);
 
+    // Moves the actor with simple deterministic math using an explicit fixed delta time
+    UFUNCTION(BlueprintCallable, Category = "Rollback|Movement")
+    void DeterministicMoveForStep(FVector InputVector, float FixedDeltaTime);
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rollback|Movement")
     float MoveSpeed = 500.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rollback|Movement")
+    bool bSweepForCollision = true;
 };
