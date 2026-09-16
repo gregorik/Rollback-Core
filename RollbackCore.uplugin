@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
-	"Version": 2,
-	"VersionName": "1.1.0",
+	"Version": 3,
+	"VersionName": "1.1.1",
 	"FriendlyName": "Rollback Core",
 	"Description": "Open-source deterministic rollback netcode for Unreal Engine 5: auto-state saving via SaveGame property reflection, UDP transport with input redundancy and reliable ACKs, and a basic local-prediction demo.",
 	"Category": "Networking",

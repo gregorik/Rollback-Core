@@ -4,7 +4,21 @@ All notable changes to Rollback Core (OSS) are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.1] - 2026-09-16
+
+### Added
+
+- **`Tools/check-shipped-content.py`** - a dependency-free guard over `Content/`. It fails if any
+  shipped `.uasset`/`.umap` carries a `RollbackCorePro` identifier, or was saved above the support
+  floor's `FileVersionUE5`. Both of the defects below are invisible in a diff, because a `.umap` is
+  opaque binary; this is what catches the next one. It also fails when it examines zero assets, so a
+  broken scan cannot report green.
+
+### Changed
+
+- **UE 5.5 is the declared support floor.** Previously the README claimed 5.7 verified and guessed
+  that "5.4-5.6 should compile". The plugin is now built and tested on each engine it claims: see
+  the support table in the README.
 
 ### Fixed
 
@@ -29,20 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hello off its own socket - while the timeout assertion ten lines below it already polled with
   `FlushTransport()`. The connect half now polls the same way. This was a defect in the test only;
   no transport or subsystem behaviour changed.
-
-### Added
-
-- **`Tools/check-shipped-content.py`** - a dependency-free guard over `Content/`. It fails if any
-  shipped `.uasset`/`.umap` carries a `RollbackCorePro` identifier, or was saved above the support
-  floor's `FileVersionUE5`. Both of the defects below are invisible in a diff, because a `.umap` is
-  opaque binary; this is what catches the next one. It also fails when it examines zero assets, so a
-  broken scan cannot report green.
-
-### Changed
-
-- **UE 5.5 is the declared support floor.** Previously the README claimed 5.7 verified and guessed
-  that "5.4-5.6 should compile". The plugin is now built and tested on each engine it claims: see
-  the support table in the README.
 
 ## [1.1.0] - 2026-09-04
 
