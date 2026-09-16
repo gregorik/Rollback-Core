@@ -6,7 +6,7 @@
 **MIT-licensed. Drop into `Plugins/`. Ship fighting-game-grade prediction.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
-[![Unreal Engine 5.7](https://img.shields.io/badge/Unreal%20Engine-5.7-313131?logo=unrealengine&logoColor=white)](https://www.unrealengine.com/)
+[![Unreal Engine 5.5+](https://img.shields.io/badge/Unreal%20Engine-5.5%2B-313131?logo=unrealengine&logoColor=white)](https://www.unrealengine.com/)
 [![Platform: Win64](https://img.shields.io/badge/Platform-Win64-0078D4?logo=windows&logoColor=white)](#installation)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)](#)
 [![Issues](https://img.shields.io/github/issues/gregorik/Rollback-Core)](https://github.com/gregorik/Rollback-Core/issues)
@@ -138,9 +138,21 @@ Then **right-click your `.uproject` → Generate Visual Studio project files**, 
 
 ### Requirements
 
-- Unreal Engine **5.7** (other 5.x versions likely work; only 5.7 is verified — see [Rollback Core Pro](#rollback-core-oss-vs-rollback-core-pro-fab) for multi-version packages)
+- Unreal Engine **5.5 or newer**. 5.5 is the support floor — the bundled `RC_BasicDemo` map is
+  authored there so that every supported engine can open it. Unreal packages are forward-compatible
+  only, and an engine older than the one that saved a map reports that map as *missing* rather than
+  as version-incompatible, which is why the floor is a hard one.
 - Visual Studio 2022 (17.8+) or Visual Studio 2026 — both verified
 - Windows 10/11 x64 (other platforms unverified)
+
+| Engine | Builds from source | Automation suite | `RC_BasicDemo` opens |
+|---|:---:|:---:|:---:|
+| UE 5.5 | ✓ | ✓ 11/11 | ✓ |
+| UE 5.6 | ✓ | ✓ 11/11 | ✓ |
+| UE 5.7 | ✓ | ✓ 11/11 | ✓ |
+| UE 5.8 | ✓ | ✓ 11/11 | ✓ |
+
+Verified 2026-09-16 on Windows 11 x64 with MSVC 14.44. Anything below 5.5 is untested.
 
 ## Quick start
 
@@ -391,7 +403,7 @@ This repository (**Rollback Core**) is MIT-licensed and ships the core simulatio
 | **Price** | Free, MIT | Paid, commercial |
 | **License** | MIT | Fab EULA |
 | **Source available** | ✓ Full source | ✓ Full source |
-| **Engine versions** | 5.7 verified | 5.4 / 5.5 / 5.6 / 5.7 packages |
+| **Engine versions** | 5.5–5.8, built from source | 5.5 / 5.6 / 5.7 prebuilt packages |
 | **Support** | Community (GitHub Issues) | Direct author support |
 | **— Core simulation —** | | |
 | Deterministic fixed-step tick | ✓ | ✓ |
@@ -441,7 +453,7 @@ This repository (**Rollback Core**) is MIT-licensed and ships the core simulatio
 **Choose Rollback Core Pro if:**
 - You want OnlineSubsystem-backed matchmaking (LAN / EOS / Steam) out of the box
 - You want a visual frame-scrubber debugger to inspect rollbacks and desyncs without writing UI
-- You need 5.4–5.7 binary packages without maintaining your own backport branches
+- You need 5.5–5.7 binary packages without maintaining your own backport branches
 - You want a worked 2D fighter demo as a starting point
 - Time-to-first-rollback-match matters more than license cost
 
@@ -497,9 +509,9 @@ Two reasons. **Pragmatic:** UE projects already use `SaveGame` for save-file ser
 </details>
 
 <details>
-<summary><strong>What about UE versions other than 5.7?</strong></summary>
+<summary><strong>Which UE versions does this work on?</strong></summary>
 
-The code targets UE 5.7 APIs but uses no 5.7-exclusive features I'm aware of. 5.4–5.6 should compile with minor or zero modification. If you backport successfully, open a PR with a notes file — would happily merge multi-version support. The Pro version ships verified 5.4/5.5/5.6/5.7 packages.
+**5.5 is the floor.** The plugin builds from source and runs its full automation suite on 5.5, 5.6, 5.7 and 5.8, and the bundled `RC_BasicDemo` map is authored at 5.5 so all four can open it. Anything below 5.5 is untested — if you backport successfully, open a PR with a notes file and I'd happily merge it. The Pro version ships prebuilt 5.5 / 5.6 / 5.7 packages.
 
 </details>
 

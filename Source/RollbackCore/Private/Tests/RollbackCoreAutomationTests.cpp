@@ -430,6 +430,17 @@ bool FRollbackPeerDisconnectTest::RunTest(const FString& Parameters)
     Error.Reset();
     TestTrue(TEXT("B connects to A"), NetB->ConnectToPeer(1, TEXT("127.0.0.1"), BasePort, Error));
 
+    // ConnectToPeer only queues B's hello onto the wire. A does not register the peer
+    // until it pumps that packet off its own socket, so tick both transports until the
+    // handshake lands instead of asserting on an un-pumped subsystem. The timeout check
+    // below already polls this way.
+    for (int32 i = 0; i < 40 && !NetA->IsConnectedToPeer(); ++i)
+    {
+        NetA->FlushTransport();
+        NetB->FlushTransport();
+        FPlatformProcess::Sleep(0.01f);
+    }
+
     TestTrue(TEXT("A is connected after B joins"), NetA->IsConnectedToPeer());
 
     NetB->StopTransport();
