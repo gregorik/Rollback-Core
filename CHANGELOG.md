@@ -30,6 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `FlushTransport()`. The connect half now polls the same way. This was a defect in the test only;
   no transport or subsystem behaviour changed.
 
+### Added
+
+- **`Tools/check-shipped-content.py`** - a dependency-free guard over `Content/`. It fails if any
+  shipped `.uasset`/`.umap` carries a `RollbackCorePro` identifier, or was saved above the support
+  floor's `FileVersionUE5`. Both of the defects below are invisible in a diff, because a `.umap` is
+  opaque binary; this is what catches the next one. It also fails when it examines zero assets, so a
+  broken scan cannot report green.
+
 ### Changed
 
 - **UE 5.5 is the declared support floor.** Previously the README claimed 5.7 verified and guessed
