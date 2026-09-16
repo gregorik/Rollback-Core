@@ -530,6 +530,8 @@ Rollback-Core/
 │       └── RC_BasicDemo.umap     # The included demo
 ├── Docs/
 │   └── network-prediction-mover.md
+├── Tools/
+│   └── check-shipped-content.py  # fails if Content/ would ship broken
 └── Source/
     └── RollbackCore/
         ├── RollbackCore.Build.cs
