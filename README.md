@@ -219,6 +219,7 @@ ClientCfg.LocalPort  = 7778;
 ClientCfg.RemoteHost = TEXT("203.0.113.42");
 ClientCfg.RemotePort = 7777;
 Net->StartUdpPeer(ClientCfg, Err);
+Net->ConnectToPeer(1, ClientCfg.RemoteHost, ClientCfg.RemotePort, Err);
 ```
 
 ### 4. Or skip code entirely and use the console
