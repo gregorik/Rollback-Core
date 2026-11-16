@@ -126,6 +126,56 @@ bool FRollbackLateInputCorrectionTest::RunTest(const FString& Parameters)
     return true;
 }
 
+// Guards the frame convention between SimulateFrame and RollbackToFrame. The
+// snapshot stored under frame F has to be the state F's input is applied to, so
+// that rolling back to F replays F exactly once. With nothing changed, a rollback
+// must therefore put everything back exactly where it was - and the desync check,
+// which compares each replayed frame against the original run, must see nothing.
+//
+// LateInputCorrection above cannot catch a frame being stepped twice: it only asks
+// whether the location changed, and its pawn stands still on every other frame.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRollbackUnchangedInputReplaysExactlyTest, "RollbackCore.Rollback.UnchangedInputReplaysExactly", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRollbackUnchangedInputReplaysExactlyTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = RollbackCore::Tests::CreateTestWorld();
+    ON_SCOPE_EXIT { RollbackCore::Tests::DestroyTestWorld(World); };
+
+    URollbackManager* Manager = World->GetSubsystem<URollbackManager>();
+    ARollbackDemoPawn* Pawn = RollbackCore::Tests::SpawnDemoPawn(World, FVector::ZeroVector);
+    TestNotNull(TEXT("Rollback manager exists"), Manager);
+    TestNotNull(TEXT("Demo pawn spawned"), Pawn);
+    if (!Manager || !Pawn || !Pawn->StateComp)
+    {
+        return false;
+    }
+
+    // Moving on every frame: a frame stepped twice while standing still is invisible.
+    for (int32 Frame = 0; Frame < 12; ++Frame)
+    {
+        FRollbackInput Input;
+        Input.Axes = FVector(1.f, 0.f, 0.f);
+        Pawn->StateComp->CurrentLocalInput = Input;
+        Manager->AdvanceFrame();
+    }
+
+    const FVector LiveLocation = Pawn->GetActorLocation();
+
+    // EarliestMismatchFrame = CurrentFrame: no input changed, so every replayed
+    // frame is held to the original run's checksum.
+    Manager->RollbackToFrame(4, Manager->CurrentFrame);
+    TestTrue(FString::Printf(TEXT("Replaying unchanged input lands where the live run did (live %s, replayed %s)"),
+        *LiveLocation.ToString(), *Pawn->GetActorLocation().ToString()), Pawn->GetActorLocation() == LiveLocation);
+    TestEqual(TEXT("Replaying unchanged input reports no desync"), Manager->DesyncCount, 0);
+
+    // Frame 0 is the edge case: there is no earlier frame to borrow a snapshot from.
+    Manager->RollbackToFrame(0, Manager->CurrentFrame);
+    TestTrue(FString::Printf(TEXT("Rolling back to frame 0 lands where the live run did (live %s, replayed %s)"),
+        *LiveLocation.ToString(), *Pawn->GetActorLocation().ToString()), Pawn->GetActorLocation() == LiveLocation);
+    TestEqual(TEXT("Rolling back to frame 0 reports no desync"), Manager->DesyncCount, 0);
+    return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRollbackNetworkBufferApplyTest, "RollbackCore.Network.BufferApply", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FRollbackNetworkBufferApplyTest::RunTest(const FString& Parameters)

@@ -128,14 +128,10 @@ void URollbackManager::SimulateFrame(int32 Frame)
         return !IsValid(E.GetObject());
     });
 
-    for (int32 i = 0; i < RegisteredEntities.Num(); ++i)
-    {
-        if (RegisteredEntities[i])
-        {
-            RegisteredEntities[i]->RollbackTick(FixedTimeStep, Frame);
-        }
-    }
-    
+    // Save BEFORE ticking, for every entity, so the snapshot stored under Frame is the
+    // state Frame's input is applied to. RollbackToFrame(Frame) restores that snapshot
+    // and replays Frame exactly once. Saving after the tick stored the END of Frame
+    // under Frame, so every rollback simulated Frame twice.
     for (int32 i = 0; i < RegisteredEntities.Num(); ++i)
     {
         if (RegisteredEntities[i])
@@ -145,6 +141,14 @@ void URollbackManager::SimulateFrame(int32 Frame)
             {
                 LastRollbackSavedStates++;
             }
+        }
+    }
+    
+    for (int32 i = 0; i < RegisteredEntities.Num(); ++i)
+    {
+        if (RegisteredEntities[i])
+        {
+            RegisteredEntities[i]->RollbackTick(FixedTimeStep, Frame);
         }
     }
     

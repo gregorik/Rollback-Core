@@ -244,17 +244,18 @@ Every world running this plugin gets two world subsystems (`URollbackManager` an
 │  Per fixed tick (default 60 Hz):                                   │
 │                                                                    │
 │  1. URollbackManager::AdvanceFrame()                               │
-│     → For each registered entity:                                  │
+│     → For each registered entity, BEFORE any of them ticks:        │
+│       • SaveRollbackState(frame)  — the state this frame STARTS    │
+│                                     from, written to ring buffer   │
+│     → Then for each registered entity:                             │
 │       • RollbackTick(dt, frame)   — gameplay logic runs            │
-│       • SaveRollbackState(frame)  — SaveGame props + transform     │
-│                                     written to ring buffer         │
 │                                                                    │
 │  2. Late authoritative input arrives over UDP                      │
 │     → URollbackNetSubsystem buffers it under (PlayerId, Frame)     │
 │                                                                    │
 │  3. URollbackManager::RollbackToFrame(N)                           │
-│     → For each entity: LoadRollbackState(N)                        │
-│     → Replay frames N+1 .. Current with corrected inputs           │
+│     → For each entity: LoadRollbackState(N) — the start of N       │
+│     → Replay frames N .. Current-1 with corrected inputs           │
 │     → Latest state is now authoritative                            │
 └────────────────────────────────────────────────────────────────────┘
 ```
@@ -277,7 +278,7 @@ The component walks the owning actor's properties at `BeginPlay`, caches the `Sa
 | Method | What it does |
 |---|---|
 | `AdvanceFrame()` | Tick all registered entities one fixed step; snapshot state |
-| `RollbackToFrame(int32 Frame, int32 EarliestMismatch = -1)` | Restore state at `Frame`, replay forward |
+| `RollbackToFrame(int32 Frame, int32 EarliestMismatch = -1)` | Restore the state `Frame` started from, replay `Frame` and everything after it. Pass the first frame whose input changed |
 | `RegisterEntity(TScriptInterface<IRollbackEntity>)` | Add to the simulated set (auto-called by `URollbackStateComponent`) |
 | `DrawDebugState(int32 Frame)` | Draw cached state for a frame |
 | `GetDebugFrameRecords(int32 Frame)` | Inspectable per-entity record for one frame |
